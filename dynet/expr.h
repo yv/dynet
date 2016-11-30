@@ -322,6 +322,20 @@ Expression random_bernoulli(ComputationGraph& g, const Dim& d, real p);
 
 /**
  * \ingroup inputoperations
+ * \brief Create a random bernoulli vector
+ * \details Create a vector distributed according to bernoulli distribution with parameter p.
+ *  The vector will be automatically scaled such that its sum of elements will equal d.
+ * 
+ * \param g Computation graph
+ * \param d The dimensions of the input
+ * \param p The bernoulli p parameter
+ * 
+ * \return A "d" dimensioned bernoulli distributed vector
+ */
+Expression scaled_random_bernoulli(ComputationGraph& g, const Dim& d, real p);
+
+/**
+ * \ingroup inputoperations
  * \brief Create a random uniform vector
  * \details Create a vector distributed according to uniform distribution with boundaries left and right.
  * 

@@ -277,6 +277,8 @@ struct TensorTools {
   static void Zero(Tensor& d);
   // sample some bernoulli random variables and scale them by scale
   static void RandomBernoulli(Tensor& val, real p, real scale = 1.0f);
+  // sample some bernoulli random variables and scale them such that they sum to tensor dimension.
+  static void ScaledRandomBernoulli(Tensor& val, real p);
   static void RandomizeNormal(Tensor& val, real mean = 0.0f, real stddev = 1.0f);
   static void RandomizeUniform(Tensor& val, real left = 0.0f, real right = 0.0f);
   // AccessElement and SetElement are very, very slow (potentially) - use appropriately

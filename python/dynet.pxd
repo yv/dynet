@@ -184,6 +184,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) #
     CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) #
     CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p)
+    CExpression c_scaled_random_bernoulli "dynet::expr::scaled_random_bernoulli" (CComputationGraph& g, CDim& d, float p)
     CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) #
 
     # identity function, but derivative is not propagated through it
