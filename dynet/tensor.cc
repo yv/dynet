@@ -148,7 +148,7 @@ void TensorTools::ScaledRandomBernoulli(Tensor& val, real p) {
   generate(val.v, val.v + val.d.size(), b);
   float sum = 0.f;
   for (int i = 0; i < val.d.size(); ++i) { sum += val.v[i]; }
-  float scale = val.d.size() / sum;
+  float scale = sum > 0.f ? val.d.size() / sum : 0.f; 
   for (int i = 0; i < val.d.size(); ++i) { val.v[i] *= scale; }
 #endif
 }
