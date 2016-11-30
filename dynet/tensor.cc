@@ -140,7 +140,7 @@ void TensorTools::ScaledRandomBernoulli(Tensor& val, real p) {
   generate(t, t + val.d.size(), b);
   float sum = 0.f;
   for (int i = 0; i < val.d.size(); ++i) { sum += t[i]; }
-  float scale = val.d.size() / sum;
+  float scale = sum > 0.f ? val.d.size() / sum : 0.f; 
   for (int i = 0; i < val.d.size(); ++i) { t[i] *= scale; }
   CUDA_CHECK(cudaMemcpy(val.v, t, sizeof(real) * val.d.size(), cudaMemcpyHostToDevice));
   delete[] t;
