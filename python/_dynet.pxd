@@ -178,6 +178,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
         CExpression(CComputationGraph *pg, VariableIndex i)
         CComputationGraph *pg
         long i
+        CDim dim()
     #CExpression c_input "dynet::expr::input" (CComputationGraph& g, float s)   #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, float *ps) #
     CExpression c_input "dynet::expr::input" (CComputationGraph& g, CDim& d, vector[float]* pdata)
@@ -190,7 +191,7 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_const_lookup "dynet::expr::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) #
     CExpression c_zeroes "dynet::expr::zeroes" (CComputationGraph& g, CDim& d) #
     CExpression c_random_normal "dynet::expr::random_normal" (CComputationGraph& g, CDim& d) #
-    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p)
+    CExpression c_random_bernoulli "dynet::expr::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale)
     CExpression c_random_uniform "dynet::expr::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) #
 
     # identity function, but derivative is not propagated through it
@@ -274,8 +275,9 @@ cdef extern from "dynet/expr.h" namespace "dynet::expr":
     CExpression c_concat_cols "dynet::expr::concatenate_cols" (vector[CExpression]& xs)
     CExpression c_concat      "dynet::expr::concatenate" (vector[CExpression]& xs)
 
-    CExpression c_sum      "dynet::expr::sum" (vector[CExpression]& xs)
-    CExpression c_max      "dynet::expr::vmax" (vector[CExpression]& xs)
+    CExpression c_sum            "dynet::expr::sum" (vector[CExpression]& xs)
+    CExpression c_max            "dynet::expr::vmax" (vector[CExpression]& xs)
+    CExpression c_logsumexp      "dynet::expr::logsumexp" (vector[CExpression]& xs)
 
 
 #cdef extern from "dynet/model.h" namespace "dynet":

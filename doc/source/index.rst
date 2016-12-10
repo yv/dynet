@@ -26,6 +26,7 @@ And get the basic information to create programs and use models:
    operations
    builders
    optimizers
+   examples
 
 Mode advanced topics are below:
 
@@ -34,6 +35,7 @@ Mode advanced topics are below:
 
    minibatch
    multiprocessing
+   unorthodox
 
 And we welcome your contributions!
 
