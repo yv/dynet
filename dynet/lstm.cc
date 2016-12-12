@@ -263,25 +263,25 @@ VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
     Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2i = model->add_parameters({hidden_dim, hidden_dim});
     //Parameter p_c2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim});
+    Parameter p_bi = model->add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // f
     Parameter p_x2f = model->add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2f = model->add_parameters({hidden_dim, hidden_dim});
     //Parameter p_c2f = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bf = model->add_parameters({hidden_dim});
+    Parameter p_bf = model->add_parameters({hidden_dim}, ParameterInitConst(1.f));
 
     // o
     Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2o = model->add_parameters({hidden_dim, hidden_dim});
     //Parameter p_c2o = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model->add_parameters({hidden_dim});
+    Parameter p_bo = model->add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c (g)
     Parameter p_x2g = model->add_parameters({hidden_dim, layer_input_dim});
     Parameter p_h2g = model->add_parameters({hidden_dim, hidden_dim});
     //Parameter p_c2g = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bg = model->add_parameters({hidden_dim});
+    Parameter p_bg = model->add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -326,7 +326,9 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 //                               i_x2o, i_h2o, i_c2o, i_bo,
 //                               i_x2g, i_h2g, i_c2g, i_bg};
     vector<Expression> vars;
-    for (int j=0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
+    for (int j=0; j < p.size(); ++j) { 
+      vars.push_back(parameter(cg, p[j]));
+    }
     param_vars.push_back(vars);
   }
 }
