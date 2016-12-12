@@ -1166,7 +1166,7 @@ cdef class _RNNBuilder: # {{{
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
@@ -1177,7 +1177,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
 cdef class GRUBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CGRUBuilder()
         self.cg_version = -1
@@ -1188,7 +1188,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
 cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
@@ -1209,7 +1209,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
 
     def whoami(self): return "FastLSTMBuilder"
@@ -1465,7 +1465,7 @@ cdef class StackedRNNState:
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1487,7 +1487,7 @@ cdef class SimpleSGDTrainer:
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1510,7 +1510,7 @@ cdef class MomentumSGDTrainer:
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
+        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1533,7 +1533,7 @@ cdef class AdagradTrainer:
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
+        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1556,7 +1556,7 @@ cdef class AdadeltaTrainer:
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
+        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
