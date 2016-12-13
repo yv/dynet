@@ -225,6 +225,10 @@ cdef class ConstInitializer(PyInitializer):
     def __init__(self, float c):
         self.initializer = new CParameterInitConst(c)
 
+cdef class IdentityInitializer(PyInitializer):
+    def __init__(self):
+        self.initializer = new CParameterInitIdentity()
+
 cdef class GlorotInitializer(PyInitializer):
     def __init__(self, bool is_lookup=False):
         self.initializer = new CParameterInitGlorot(is_lookup)
@@ -285,11 +289,14 @@ cdef class Model: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
         assert(isinstance(dim, tuple))
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
+        if init is None:
+            init = GlorotInitializer()
+        initializer = init.initializer
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -1474,6 +1481,8 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1496,6 +1505,8 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1519,6 +1530,8 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1542,6 +1555,8 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1565,6 +1580,8 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False

@@ -74,6 +74,9 @@ cdef extern from "dynet/model.h" namespace "dynet":
     cdef cppclass CParameterInitConst "dynet::ParameterInitConst" (CParameterInit):
         CParameterInitConst(float c)
 
+    cdef cppclass CParameterInitIdentity "dynet::ParameterInitIdentity" (CParameterInit):
+        CParameterInitIdentity()
+
     cdef cppclass CParameterInitGlorot "dynet::ParameterInitGlorot" (CParameterInit):
         CParameterInitGlorot(bool is_lookup) # is_lookup = False
 
@@ -95,6 +98,7 @@ cdef extern from "dynet/model.h" namespace "dynet":
         #CParameters add_parameters(CDim& d, CParameterInitUniform initializer)
         #CParameters add_parameters(CDim& d, CParameterInitConst initializer)
         CLookupParameters add_lookup_parameters(unsigned n, const CDim& d)
+        CLookupParameters add_lookup_parameters(unsigned n, const CDim& d, CParameterInit initializer)
         vector[CParameterStorage] parameters_list()
 
     void load_dynet_model "dynet::load_dynet_model" (string filename, CModel *model)
@@ -135,6 +139,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CSimpleSGDTrainer(CModel& m, float e0, float edecay) # TODO removed lam, update docs.
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -143,6 +148,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CMomentumSGDTrainer(CModel& m, float e0, float mom, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -151,6 +157,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdagradTrainer(CModel& m, float e0, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -159,6 +166,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdadeltaTrainer(CModel& m, float eps, float rho, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
@@ -167,6 +175,7 @@ cdef extern from "dynet/training.h" namespace "dynet":
         CAdamTrainer(CModel& m, float alpha, float beta_1, float beta_2, float eps, float edecay) # TODO removed lam, update docs
         float clip_threshold
         bool clipping_enabled
+        bool sparse_updates_enabled
         void update(float s)
         void update_epoch(float r)
         void status()
