@@ -256,32 +256,32 @@ enum { _X2I, _H2I, _BI, _X2F, _H2F, _BF, _X2O, _H2O, _BO, _X2G, _H2G, _BG };
 VanillaLSTMBuilder::VanillaLSTMBuilder(unsigned layers,
                          unsigned input_dim,
                          unsigned hidden_dim,
-                         Model* model) : layers(layers) {
+                         Model& model) : layers(layers) {
   unsigned layer_input_dim = input_dim;
   for (unsigned i = 0; i < layers; ++i) {
     // i
-    Parameter p_x2i = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2i = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2i = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bi = model->add_parameters({hidden_dim});
+    Parameter p_x2i = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2i = model.add_parameters({hidden_dim, hidden_dim}, ParameterInitIdentity());
+    //Parameter p_c2i = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bi = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // f
-    Parameter p_x2f = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2f = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2f = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bf = model->add_parameters({hidden_dim});
+    Parameter p_x2f = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2f = model.add_parameters({hidden_dim, hidden_dim}, ParameterInitIdentity());
+    //Parameter p_c2f = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bf = model.add_parameters({hidden_dim}, ParameterInitConst(1.f));
 
     // o
-    Parameter p_x2o = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2o = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2o = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bo = model->add_parameters({hidden_dim});
+    Parameter p_x2o = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2o = model.add_parameters({hidden_dim, hidden_dim}, ParameterInitIdentity());
+    //Parameter p_c2o = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bo = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     // c (g)
-    Parameter p_x2g = model->add_parameters({hidden_dim, layer_input_dim});
-    Parameter p_h2g = model->add_parameters({hidden_dim, hidden_dim});
-    //Parameter p_c2g = model->add_parameters({hidden_dim, hidden_dim});
-    Parameter p_bg = model->add_parameters({hidden_dim});
+    Parameter p_x2g = model.add_parameters({hidden_dim, layer_input_dim});
+    Parameter p_h2g = model.add_parameters({hidden_dim, hidden_dim}, ParameterInitIdentity());
+    //Parameter p_c2g = model.add_parameters({hidden_dim, hidden_dim});
+    Parameter p_bg = model.add_parameters({hidden_dim}, ParameterInitConst(0.f));
 
     layer_input_dim = hidden_dim;  // output (hidden) from 1st layer is input to next
 
@@ -326,7 +326,9 @@ void VanillaLSTMBuilder::new_graph_impl(ComputationGraph& cg) {
 //                               i_x2o, i_h2o, i_c2o, i_bo,
 //                               i_x2g, i_h2g, i_c2g, i_bg};
     vector<Expression> vars;
-    for (int j=0; j < p.size(); ++j) { vars.push_back(parameter(cg, p[j])); }
+    for (size_t j=0; j < p.size(); ++j) { 
+      vars.push_back(parameter(cg, p[j]));
+    }
     param_vars.push_back(vars);
   }
 }
