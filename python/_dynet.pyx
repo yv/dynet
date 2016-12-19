@@ -225,6 +225,10 @@ cdef class ConstInitializer(PyInitializer):
     def __init__(self, float c):
         self.initializer = new CParameterInitConst(c)
 
+cdef class IdentityInitializer(PyInitializer):
+    def __init__(self):
+        self.initializer = new CParameterInitIdentity()
+
 cdef class GlorotInitializer(PyInitializer):
     def __init__(self, bool is_lookup=False):
         self.initializer = new CParameterInitGlorot(is_lookup)
@@ -285,11 +289,14 @@ cdef class Model: # {{{
         cdef Parameters pp = Parameters.wrap_ptr(p)
         return pp
 
-    cpdef add_lookup_parameters(self, dim):
+    cpdef add_lookup_parameters(self, dim, PyInitializer init=None):
         assert(isinstance(dim, tuple))
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
-        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest))
+        if init is None:
+            init = GlorotInitializer()
+        initializer = init.initializer
+        cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
         return pp
 
@@ -619,17 +626,54 @@ cdef class Expression: #{{{
     cdef CExpression c(self):
         return CExpression(self.cgp(), self.vindex)
 
+    cpdef dim(self):
+        cdef CDim d;
+        d=self.c().dim()
+        return (d.size(), d.rows(), d.cols(), d.batch_elems())
+
     def __repr__(self):
         return str(self)
     def __str__(self):
-        return "exprssion %s/%s" % (<int>self.vindex, self.cg_version)
+        return "expression %s/%s" % (<int>self.vindex, self.cg_version)
 
     # __getitem__ and __getslice__ in one for python 3 compatibility
-    def __getitem__(self, object index):
-         if isinstance(index, int):
-             return pick(self, index)            
-         
-         return pickrange(self, index[0], index[1])
+    def __getitem__(self, index):
+        assert isinstance(index, (int, slice))
+        cdef int rows = self.c().dim().rows()
+        cdef int i, j
+        if isinstance(index, int):
+            i = index
+            if i > rows - 1:
+                raise IndexError("Index too large: %d > %d" % (i, rows - 1))
+            if i < -rows:
+                raise IndexError("Index too small: %d < %d" % (i, -rows))
+            if i < 0:
+                i += rows
+            return pick(self, i)
+        else:
+            i = 0
+            j = rows
+            if index.start is not None:
+                i = index.start
+                if i > rows - 1:
+                    raise IndexError("Start index too large: %d > %d" % (i, rows - 1))
+                if i < -rows:
+                    raise IndexError("Start index too small: %d < %d" % (i, -rows))
+                if i < 0:
+                    i += rows
+            if index.stop is not None:
+                j = index.stop
+                if j > rows - 1:
+                    raise IndexError("Stop index too large: %d > %d" % (j, rows - 1))
+                if j < -rows:
+                    raise IndexError("Stop index too small: %d < %d" % (j, -rows))
+                if j < 0:
+                    j += rows
+            if i >= j:
+                raise ValueError("Improper slice: start index must come strictly before stop index")
+            if index.step is not None:
+                raise ValueError("Step sizes not yet supported.")
+            return pickrange(self, i, j)
 
     cpdef scalar_value(self, recalculate=False):
         if self.cg_version != _cg._cg_version: raise RuntimeError("Stale Expression (created before renewing the Computation Graph).")
@@ -854,7 +898,7 @@ def hinge(Expression x, unsigned index, float m=1.0):
 
 cpdef Expression zeroes(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
 cpdef Expression random_normal(dim, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
-cpdef Expression random_bernoulli(dim, float p, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p))
+cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
 cpdef Expression random_uniform(dim, float left, float right, int batch_size=1): return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
 
 cpdef Expression nobackprop(Expression x): return Expression.from_cexpr(x.cg_version, c_nobackprop(x.c()))
@@ -934,6 +978,17 @@ cpdef Expression esum(list xs):
         cvec.push_back(x.c())
     #print(cvec.size(), file=sys.stderr)
     return Expression.from_cexpr(x.cg_version, c_sum(cvec))
+
+cpdef Expression logsumexp(list xs):
+    assert xs, 'List is empty, nothing to logsumexp.'
+    cdef vector[CExpression] cvec
+    cvec = vector[CExpression]()
+    cdef Expression x
+    for x in xs:
+        ensure_freshness(x)
+        cvec.push_back(x.c())
+    #print(cvec.size(), file=sys.stderr)
+    return Expression.from_cexpr(x.cg_version, c_logsumexp(cvec))
 
 cpdef Expression average(list xs):
     assert xs, 'List is empty, nothing to average.'
@@ -1118,7 +1173,7 @@ cdef class _RNNBuilder: # {{{
 cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CSimpleRNNBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CSimpleRNNBuilder()
         self.cg_version = -1
@@ -1129,7 +1184,7 @@ cdef class SimpleRNNBuilder(_RNNBuilder): # {{{
 cdef class GRUBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CGRUBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CGRUBuilder()
         self.cg_version = -1
@@ -1140,7 +1195,7 @@ cdef class GRUBuilder(_RNNBuilder): # {{{
 cdef class LSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
         if layers > 0:
-            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+            self.thisptr = new CLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         else:
             self.thisptr = new CLSTMBuilder()
         self.cg_version = -1
@@ -1161,7 +1216,7 @@ cdef class VanillaLSTMBuilder(_RNNBuilder): # {{{
 
 cdef class FastLSTMBuilder(_RNNBuilder): # {{{
     def __cinit__(self, unsigned layers, unsigned input_dim, unsigned hidden_dim, Model model):
-        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr)
+        self.thisptr = new CFastLSTMBuilder(layers, input_dim, hidden_dim, model.thisptr[0])
         self.cg_version = -1
 
     def whoami(self): return "FastLSTMBuilder"
@@ -1417,7 +1472,7 @@ cdef class StackedRNNState:
 cdef class SimpleSGDTrainer:
     cdef CSimpleSGDTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.1, float edecay = 0.0):
-        self.thisptr = new CSimpleSGDTrainer(m.thisptr, e0, edecay)
+        self.thisptr = new CSimpleSGDTrainer(m.thisptr[0], e0, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1426,6 +1481,8 @@ cdef class SimpleSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1439,7 +1496,7 @@ cdef class SimpleSGDTrainer:
 cdef class MomentumSGDTrainer:
     cdef CMomentumSGDTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.01, float mom = 0.9, float edecay = 0.0):
-        self.thisptr = new CMomentumSGDTrainer(m.thisptr, e0, mom, edecay)
+        self.thisptr = new CMomentumSGDTrainer(m.thisptr[0], e0, mom, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1448,6 +1505,8 @@ cdef class MomentumSGDTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1462,7 +1521,7 @@ cdef class MomentumSGDTrainer:
 cdef class AdagradTrainer:
     cdef CAdagradTrainer *thisptr
     def __cinit__(self, Model m, float e0 = 0.1, float eps = 1e-20, float edecay = 0.0):
-        self.thisptr = new CAdagradTrainer(m.thisptr, e0, eps, edecay)
+        self.thisptr = new CAdagradTrainer(m.thisptr[0], e0, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1471,6 +1530,8 @@ cdef class AdagradTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1485,7 +1546,7 @@ cdef class AdagradTrainer:
 cdef class AdadeltaTrainer:
     cdef CAdadeltaTrainer *thisptr
     def __cinit__(self, Model m, float eps = 1e-6, float rho = 0.95, float edecay = 0.0):
-        self.thisptr = new CAdadeltaTrainer(m.thisptr, eps, rho, edecay)
+        self.thisptr = new CAdadeltaTrainer(m.thisptr[0], eps, rho, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1494,6 +1555,8 @@ cdef class AdadeltaTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
@@ -1508,7 +1571,7 @@ cdef class AdadeltaTrainer:
 cdef class AdamTrainer:
     cdef CAdamTrainer *thisptr
     def __cinit__(self, Model m, float alpha = 0.001, float beta_1 = 0.9, float beta_2 = 0.999, eps = 1e-8, float edecay = 0.0 ):
-        self.thisptr = new CAdamTrainer(m.thisptr, alpha, beta_1, beta_2, eps, edecay)
+        self.thisptr = new CAdamTrainer(m.thisptr[0], alpha, beta_1, beta_2, eps, edecay)
     def __dealloc__(self):
         del self.thisptr
     cpdef update(self, float s=1.0):
@@ -1517,6 +1580,8 @@ cdef class AdamTrainer:
         self.thisptr.update_epoch(r)
     cpdef status(self):
         self.thisptr.status()
+    cpdef set_sparse_updates(self,bool su):
+        self.thisptr.sparse_updates_enabled = su
     cpdef set_clip_threshold(self,float thr):
         if thr<=0:
             self.thisptr.clipping_enabled = False
