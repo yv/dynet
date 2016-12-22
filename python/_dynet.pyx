@@ -294,7 +294,7 @@ cdef class Model: # {{{
         cdef int nids = dim[0]
         rest = tuple(dim[1:])
         if init is None:
-            init = GlorotInitializer()
+            init = GlorotInitializer(True)
         initializer = init.initializer
         cdef CLookupParameters p = self.thisptr.add_lookup_parameters(nids, Dim(rest), deref(initializer))
         cdef LookupParameters pp = LookupParameters.wrap_ptr(p)
@@ -942,6 +942,8 @@ cpdef Expression pow(Expression x, Expression y): ensure_freshness(y); return Ex
 cpdef Expression bmin(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmin(x.c(), y.c()))
 cpdef Expression bmax(Expression x, Expression y): ensure_freshness(y); return Expression.from_cexpr(x.cg_version, c_bmax(x.c(), y.c()))
 cpdef Expression transpose(Expression x): return Expression.from_cexpr(x.cg_version, c_transpose(x.c()))
+cpdef Expression select_rows(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_rows(x.c(), rs))
+cpdef Expression select_cols(Expression x, vector[unsigned] rs): return Expression.from_cexpr(x.cg_version, c_select_cols(x.c(), rs))
 cpdef Expression sum_cols(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_cols(x.c()))
 
 cpdef Expression sum_batches(Expression x): return Expression.from_cexpr(x.cg_version, c_sum_batches(x.c()))
