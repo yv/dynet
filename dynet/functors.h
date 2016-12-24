@@ -213,12 +213,6 @@ struct FLogSoftmaxNormalize {
   float logz;
 };
 
-struct FWeightedError {
-  float operator()(float t, float d) const {
-    return expf(t) * d / expf(t);
-  }
-};
-
 struct FLogSoftmaxBackward {
   explicit FLogSoftmaxBackward(float off_diag_sum) : off_diag_sum(off_diag_sum) {}
   DYNET_DEVICE_FUNC inline float operator()(float t, float d) const {
